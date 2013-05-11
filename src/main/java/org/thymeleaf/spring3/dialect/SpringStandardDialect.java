@@ -37,6 +37,7 @@ import org.thymeleaf.doctype.translation.IDocTypeTranslation;
 import org.thymeleaf.processor.IProcessor;
 import org.thymeleaf.spring3.expression.SpelVariableExpressionEvaluator;
 import org.thymeleaf.spring3.processor.attr.SpringErrorsAttrProcessor;
+import org.thymeleaf.spring3.processor.attr.SpringErrorsGlobalAttrProcessor;
 import org.thymeleaf.spring3.processor.attr.SpringInputCheckboxFieldAttrProcessor;
 import org.thymeleaf.spring3.processor.attr.SpringInputFileFieldAttrProcessor;
 import org.thymeleaf.spring3.processor.attr.SpringInputGeneralFieldAttrProcessor;
@@ -451,6 +452,7 @@ public class SpringStandardDialect extends StandardDialect {
         
         processors.add(new SpringObjectAttrProcessor());
         processors.add(new SpringErrorsAttrProcessor());
+        processors.add(new SpringErrorsGlobalAttrProcessor());
         processors.addAll(Arrays.asList(SpringInputGeneralFieldAttrProcessor.PROCESSORS));
         processors.add(new SpringInputPasswordFieldAttrProcessor());
         processors.add(new SpringInputCheckboxFieldAttrProcessor());
