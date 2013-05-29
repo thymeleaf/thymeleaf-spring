@@ -61,10 +61,8 @@ public class FieldUtils {
     
     public static boolean hasErrors(final Configuration configuration, 
             final IProcessingContext processingContext, final String field) {
-
         final BindStatus bindStatus = 
             FieldUtils.getBindStatus(configuration, processingContext, convertToFieldExpression(field), true);
-        
         return bindStatus.isError();
         
     }
@@ -80,6 +78,17 @@ public class FieldUtils {
 
         final BindStatus bindStatus = 
             FieldUtils.getBindStatus(configuration, processingContext, convertToFieldExpression(field), true);
+        
+        final String[] errorCodes = bindStatus.getErrorMessages();
+        return Arrays.asList(errorCodes);
+        
+    }
+    
+    public static List<String> errorsGlobal(final Configuration configuration,
+            final IProcessingContext processingContext) {
+
+        final BindStatus bindStatus = 
+            FieldUtils.getBindStatusGlobal(configuration, processingContext);
         
         final String[] errorCodes = bindStatus.getErrorMessages();
         return Arrays.asList(errorCodes);
@@ -107,6 +116,11 @@ public class FieldUtils {
         return getBindStatus(arguments.getConfiguration(), arguments, fieldExpression, allowAllFields);
     }
     
+    public static BindStatus getBindStatusGlobal(
+            final Arguments arguments) {
+        return getBindStatusGlobal(arguments.getConfiguration(), arguments);
+    }
+    
     
     public static BindStatus getBindStatus(final Configuration configuration, 
             final IProcessingContext processingContext, final String fieldExpression, final boolean allowAllFields) {
@@ -120,7 +134,7 @@ public class FieldUtils {
         if (allowAllFields && ALL_FIELDS_FIELD_EXPRESSION.equals(fieldExpression)) {
             
             final String completeExpression = 
-                FieldUtils.validateAndGetValueExpressionForAllFields(processingContext);
+                FieldUtils.validateAndGetValueExpressionForAllFields(processingContext, false);
             
             return new BindStatus(requestContext, completeExpression, false);
             
@@ -133,6 +147,22 @@ public class FieldUtils {
             FieldUtils.validateAndGetValueExpressionForField(processingContext, expression);
         
         return new BindStatus(requestContext, completeExpression, false);
+        
+    }
+    
+    public static BindStatus getBindStatusGlobal(final Configuration configuration, 
+            final IProcessingContext processingContext) {
+        
+        final RequestContext requestContext =
+            (RequestContext) processingContext.getContext().getVariables().get(SpringContextVariableNames.SPRING_REQUEST_CONTEXT);
+        if (requestContext == null) {
+            throw new TemplateProcessingException("A request context has not been created");
+        }
+
+        final String completeExpression = 
+                FieldUtils.validateAndGetValueExpressionForAllFields(processingContext, true);
+        return new BindStatus(requestContext, completeExpression, false);
+        
         
     }
 
@@ -170,7 +200,7 @@ public class FieldUtils {
     
     
     private static String validateAndGetValueExpressionForAllFields(
-            final IProcessingContext processingContext) {
+            final IProcessingContext processingContext, boolean onlyGlobal) {
 
         final VariableExpression formCommandValue = 
             (VariableExpression) processingContext.getLocalVariable(SpringContextVariableNames.SPRING_FORM_COMMAND_VALUE);
@@ -180,16 +210,16 @@ public class FieldUtils {
                     "been established in the \"form\" tag");
         }
         final String formCommandExpression = formCommandValue.getExpression();
+        if(onlyGlobal) {
+            return formCommandExpression;
+        }
         return formCommandExpression + "." + ALL_FIELDS;
         
     }
-    
-    
 
-    
-	private FieldUtils() {
-	    super();
-	}
+    private FieldUtils() {
+	super();
+    }
 
 	
 }
