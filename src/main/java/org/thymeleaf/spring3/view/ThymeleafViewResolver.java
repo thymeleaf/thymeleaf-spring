@@ -34,7 +34,14 @@ import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.view.AbstractCachingViewResolver;
 import org.springframework.web.servlet.view.InternalResourceView;
 import org.springframework.web.servlet.view.RedirectView;
+import org.thymeleaf.dialect.IDialect;
+import org.thymeleaf.exceptions.ConfigurationException;
+import org.thymeleaf.fragment.DOMSelectorFragmentSpec;
+import org.thymeleaf.fragment.ElementAndAttributeNameFragmentSpec;
+import org.thymeleaf.fragment.IFragmentSpec;
 import org.thymeleaf.spring3.SpringTemplateEngine;
+import org.thymeleaf.spring3.dialect.SpringStandardDialect;
+import org.thymeleaf.standard.processor.attr.StandardFragmentAttrProcessor;
 
 
 /**
@@ -592,7 +599,7 @@ public class ThymeleafViewResolver
     
     
 
-    protected boolean canHandle(final String viewName, @SuppressWarnings("unused") final Locale locale) {
+    protected boolean canHandle(final String viewName, final Locale locale) {
         final String[] viewNamesToBeProcessed = getViewNames();
         final String[] viewNamesNotToBeProcessed = getExcludedViewNames();
         return ((viewNamesToBeProcessed == null || PatternMatchUtils.simpleMatch(viewNamesToBeProcessed, viewName)) &&
@@ -627,8 +634,15 @@ public class ThymeleafViewResolver
     
     
     @Override
-    protected View loadView(final String viewName, final Locale locale) throws Exception {
+    protected View loadView(String viewName, final Locale locale) throws Exception {
         
+        String fragmentName = null;
+        int index;
+        if ((index = viewName.indexOf(" :: ")) != -1) {
+            fragmentName = viewName.substring(index + 4);
+            viewName = viewName.substring(0, index);
+        }
+
         final AutowireCapableBeanFactory beanFactory = getApplicationContext().getAutowireCapableBeanFactory();
         
         AbstractThymeleafView view = BeanUtils.instantiateClass(getViewClass());
@@ -668,9 +682,51 @@ public class ThymeleafViewResolver
             view.setCharacterEncoding(getCharacterEncoding());
         }
         
+        if (fragmentName != null
+                && ThymeleafView.class.isAssignableFrom(view.getClass())) {
+
+            IFragmentSpec fragmentSpec = null;
+            if (fragmentName.length() > 2 && fragmentName.charAt(0) == '['
+                    && fragmentName.charAt(fragmentName.length() - 1) == ']') {
+                // Fragment is a DOM selector
+                fragmentSpec = new DOMSelectorFragmentSpec(fragmentName
+                        .substring(1, fragmentName.length() - 1).trim());
+            } else {
+                // Fragment is not a DOM selector, therefore it is a fragment
+                // name
+                fragmentSpec = new ElementAndAttributeNameFragmentSpec(null,
+                        getFragmentAttributeName(), fragmentName);
+            }
+            ((ThymeleafView) view).setFragmentSpec(fragmentSpec);
+        }
+        
         return view;
         
     }
 
+    private String getStandardDialectPrefix() {
+
+        for (final Map.Entry<String, IDialect> dialectByPrefix : templateEngine
+                .getDialectsByPrefix().entrySet()) {
+            final IDialect dialect = dialectByPrefix.getValue();
+            if (SpringStandardDialect.class
+                    .isAssignableFrom(dialect.getClass())) {
+                return dialectByPrefix.getKey();
+            }
+        }
+
+        throw new ConfigurationException(
+                "StandardDialect dialect has not been found. In order to use ThymeleafView, you should configure "
+                        + "the "
+                        + SpringStandardDialect.class.getName()
+                        + " dialect at your Template Engine");
+
+    }
+
+    private String getFragmentAttributeName() {
+        // In most cases: "th:fragment"
+        return getStandardDialectPrefix() + ":"
+                + StandardFragmentAttrProcessor.ATTR_NAME;
+    }
     
 }
