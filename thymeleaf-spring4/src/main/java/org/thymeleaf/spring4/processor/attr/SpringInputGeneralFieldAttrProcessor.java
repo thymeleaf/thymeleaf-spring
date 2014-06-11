@@ -115,8 +115,10 @@ public final class SpringInputGeneralFieldAttrProcessor
         // Thanks to precedence, this should have already been computed
         final String type = element.getAttributeValueFromNormalizedName("type");
 
+        final Object valueObj = getValue(bindStatus, element);
+
         // No escaping needed as attribute values are always escaped by default
-        final String value = ValueFormatterWrapper.getDisplayString(bindStatus.getValue(), bindStatus.getEditor(), false);
+        final String value = ValueFormatterWrapper.getDisplayString(valueObj, bindStatus.getEditor(), false);
         
         element.setAttribute("id", id);
         element.setAttribute("name", name);
@@ -132,6 +134,22 @@ public final class SpringInputGeneralFieldAttrProcessor
         
     }
 
-    
+    /**
+     * Useful for cases when you would like to set value from {@link
+     * org.springframework.ui.Model Model}'s attribute instead of {@link
+     * org.springframework.web.bind.annotation.ModelAttribute ModelAttribute}'s
+     * field when this field is null
+     *
+     * @param bindStatus field bind status
+     * @param element
+     * @return bind status value if it's not null or {@link
+     * org.thymeleaf.dom.Element Element}'s value of "value" attribute
+     */
+    private Object getValue(final BindStatus bindStatus, final Element element) {
+        if (bindStatus.getValue() == null) {
+            return element.getAttributeValue("value");
+        }
+        return bindStatus.getValue();
+    }
 
 }
