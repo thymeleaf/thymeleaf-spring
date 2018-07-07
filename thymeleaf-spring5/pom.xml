@@ -111,8 +111,8 @@
     <project.build.sourceEncoding>US-ASCII</project.build.sourceEncoding>
     <!-- A project-name-based approach is adopted for the module name (instead of a reverse-DNS one) -->
     <module.name>${project.artifactId}</module.name>
-    <springframework.version>5.0.0.RELEASE</springframework.version>
-    <springwebflow.version>2.4.4.RELEASE</springwebflow.version>
+    <springframework.version>5.0.5.RELEASE</springframework.version>
+    <springwebflow.version>2.4.7.RELEASE</springwebflow.version>
     <slf4j.version>1.7.25</slf4j.version>
   </properties>
 
