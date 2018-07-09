@@ -164,7 +164,12 @@ public final class FieldUtils {
         }
 
         if (bindExpression != null) {
-            final List<FieldError> fieldErrors = errors.getFieldErrors(bindStatus.getExpression());
+            final List<FieldError> fieldErrors;
+            if (ALL_EXPRESSION.equals(bindExpression) || ALL_FIELDS.equals(bindExpression)) {
+                fieldErrors = errors.getFieldErrors();
+            } else {
+                fieldErrors = errors.getFieldErrors(bindExpression);
+            }
             for (final FieldError fieldError : fieldErrors) {
                 final String message = requestContext.getMessage(fieldError, false);
                 final DetailedError errorObject =
