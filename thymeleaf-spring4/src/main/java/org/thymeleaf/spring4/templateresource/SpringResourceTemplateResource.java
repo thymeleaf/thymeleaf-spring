@@ -100,7 +100,7 @@ public final class SpringResourceTemplateResource implements ITemplateResource {
     public Reader reader() throws IOException {
 
         // Will never return null, but an IOException if not found
-        final InputStream inputStream = this.resource.getInputStream();
+        final InputStream inputStream = inputStream();
 
         if (!StringUtils.isEmptyOrWhitespace(this.characterEncoding)) {
             return new BufferedReader(new InputStreamReader(new BufferedInputStream(inputStream), this.characterEncoding));
@@ -108,6 +108,11 @@ public final class SpringResourceTemplateResource implements ITemplateResource {
 
         return new BufferedReader(new InputStreamReader(new BufferedInputStream(inputStream)));
 
+    }
+
+    public InputStream inputStream() throws IOException {
+        // Will never return null, but an IOException if not found
+        return this.resource.getInputStream();
     }
 
     public ITemplateResource relative(final String relativeLocation) {
@@ -192,6 +197,11 @@ public final class SpringResourceTemplateResource implements ITemplateResource {
 
         @Override
         public Reader reader() throws IOException {
+            throw new IOException("Invalid relative resource", this.ioException);
+        }
+
+        @Override
+        public InputStream inputStream() throws IOException {
             throw new IOException("Invalid relative resource", this.ioException);
         }
 
