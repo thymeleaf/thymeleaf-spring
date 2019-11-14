@@ -197,12 +197,12 @@
         <artifactId>maven-javadoc-plugin</artifactId>
         <version>3.1.0</version>
         <configuration>
+          <source>8</source>
           <noqualifier>java.lang</noqualifier>
           <overview>${basedir}/src/main/javadoc/overview.html</overview>
           <javadocDirectory>${basedir}/src/main/javadoc</javadocDirectory>
           <reportOutputDirectory>${project.reporting.outputDirectory}/api/${project.artifactId}/apidocs</reportOutputDirectory>
           <excludePackageNames>org.springframework</excludePackageNames>
-          <additionalJOption>--no-module-directories</additionalJOption>
         </configuration>
         <executions>
           <execution>
