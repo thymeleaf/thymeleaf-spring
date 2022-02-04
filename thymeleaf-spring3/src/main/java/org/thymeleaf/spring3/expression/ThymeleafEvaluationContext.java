@@ -110,7 +110,7 @@ public final class ThymeleafEvaluationContext
         // We need to establish a custom type locator in order to forbid access to certain dangerous classes in expressions
         this.setTypeLocator(TYPE_LOCATOR);
 
-        // We need to establish a custom method resolver in order to forbid calling methods on any of the blacklisted classes
+        // We need to establish a custom method resolver in order to forbid calling methods on any of the blocked classes
         this.setMethodResolvers(METHOD_RESOLVERS);
 
     }
@@ -186,8 +186,8 @@ public final class ThymeleafEvaluationContext
                 throw new EvaluationException(
                         String.format(
                                 "Access is forbidden for type '%s' in Thymeleaf expressions. " +
-                                "Blacklisted classes are: %s.",
-                                typeName, ExpressionUtils.getBlacklist()));
+                                "Blocked classes are: %s.",
+                                typeName, ExpressionUtils.getBlockedClasses()));
             }
             return this.typeLocator.findType(typeName);
         }
@@ -215,8 +215,8 @@ public final class ThymeleafEvaluationContext
                     throw new EvaluationException(
                             String.format(
                                     "Calling methods is forbidden for type '%s' in Thymeleaf expressions. " +
-                                    "Blacklisted classes are: %s.",
-                                    type.getName(), ExpressionUtils.getBlacklist()));
+                                    "Blocked classes are: %s.",
+                                    type.getName(), ExpressionUtils.getBlockedClasses()));
                 }
             }
             return super.resolve(context, targetObject, name, argumentTypes);
