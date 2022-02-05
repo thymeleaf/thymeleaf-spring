@@ -100,7 +100,10 @@ public final class SpringValueTagProcessor
 
             // We will need to know the 'name' and 'type' attribute values in order to (potentially) modify the 'value'
             final String nameValue = tag.getAttributeValue(this.nameAttributeDefinition.getAttributeName());
-            final String typeValue = tag.getAttributeValue(this.typeAttributeDefinition.getAttributeName());
+            String typeValue = tag.getAttributeValue(this.typeAttributeDefinition.getAttributeName());
+            if (typeValue == null) {
+                typeValue = tag.getElementCompleteName();
+            }
 
             newAttributeValue =
                     RequestDataValueProcessorUtils.processFormFieldValue(context, nameValue, newAttributeValue, typeValue);
