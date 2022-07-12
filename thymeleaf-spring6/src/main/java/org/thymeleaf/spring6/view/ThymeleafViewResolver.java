@@ -91,6 +91,7 @@ public class ThymeleafViewResolver
 
     private boolean redirectContextRelative = true;
     private boolean redirectHttp10Compatible = true;
+    private boolean redirectExposeModelAttributes = true;
 
     private boolean alwaysProcessRedirectAndForward = true;
 
@@ -525,6 +526,33 @@ public class ThymeleafViewResolver
     }
 
 
+    /**
+     * <p>
+     *     Set whether model attributes should be appended to the URI, when performing a redirection.
+     * </p>
+     *
+     * @param redirectExposeModelAttributes true if model attributes should be appended to the redirect URI,
+     *        false if not
+     * @see RedirectView#setExposeModelAttributes(boolean)
+     */
+    public void setRedirectExposeModelAttributes(final boolean redirectExposeModelAttributes) {
+        this.redirectExposeModelAttributes = redirectExposeModelAttributes;
+    }
+
+
+    /**
+     * <p>
+     *     Return whether model attributes should be appended to the URI, when performing a redirection.
+     * </p>
+     *
+     * @return whether model attributes should be appended to the URI, when performing a redirection.
+     * @see RedirectView#setExposeModelAttributes(boolean)
+     *
+     */
+    public boolean shouldRedirectExposeModelAttributes() {
+        return this.redirectExposeModelAttributes;
+    }
+
 
     /**
      * <p>
@@ -775,7 +803,7 @@ public class ThymeleafViewResolver
         if (viewName.startsWith(REDIRECT_URL_PREFIX)) {
             vrlogger.trace("[THYMELEAF] View \"{}\" is a redirect, and will not be handled directly by ThymeleafViewResolver.", viewName);
             final String redirectUrl = viewName.substring(REDIRECT_URL_PREFIX.length(), viewName.length());
-            final RedirectView view = new RedirectView(redirectUrl, isRedirectContextRelative(), isRedirectHttp10Compatible());
+            final RedirectView view = new RedirectView(redirectUrl, isRedirectContextRelative(), isRedirectHttp10Compatible(), shouldRedirectExposeModelAttributes());
             return (View) getApplicationContext().getAutowireCapableBeanFactory().initializeBean(view, REDIRECT_URL_PREFIX);
         }
         // Process forwards (to JSP resources)
