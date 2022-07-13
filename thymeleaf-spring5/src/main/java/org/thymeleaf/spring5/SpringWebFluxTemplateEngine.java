@@ -34,27 +34,22 @@ import org.springframework.core.ReactiveAdapterRegistry;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.http.MediaType;
-import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.http.server.reactive.ServerHttpResponse;
-import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.WebSession;
 import org.thymeleaf.IThrottledTemplateProcessor;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.TemplateSpec;
 import org.thymeleaf.context.IContext;
 import org.thymeleaf.context.IEngineContext;
+import org.thymeleaf.context.IWebContext;
 import org.thymeleaf.engine.DataDrivenTemplateIterator;
 import org.thymeleaf.engine.ISSEThrottledTemplateWriterControl;
 import org.thymeleaf.engine.IThrottledTemplateWriterControl;
 import org.thymeleaf.engine.ThrottledTemplateProcessor;
 import org.thymeleaf.exceptions.TemplateProcessingException;
+import org.thymeleaf.spring5.context.Contexts;
 import org.thymeleaf.spring5.context.webflux.IReactiveDataDriverContextVariable;
 import org.thymeleaf.spring5.context.webflux.IReactiveSSEDataDriverContextVariable;
-import org.thymeleaf.spring5.context.webflux.ISpringWebFluxContext;
-import org.thymeleaf.spring5.context.webflux.SpringWebFluxContext;
-import org.thymeleaf.spring5.context.webflux.SpringWebFluxEngineContextFactory;
-import org.thymeleaf.spring5.linkbuilder.webflux.SpringWebFluxLinkBuilder;
 import org.thymeleaf.util.LoggingUtils;
+import org.thymeleaf.web.IWebExchange;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -91,16 +86,7 @@ public class SpringWebFluxTemplateEngine
 
 
     public SpringWebFluxTemplateEngine() {
-
         super();
-        // In Spring WebFlux environments, we will need to use a special context factory in order to
-        // use an environment-tailored implementation of IEngineContext.
-        this.setEngineContextFactory(new SpringWebFluxEngineContextFactory());
-        // In Spring WebFlux environments, we will need to use a special link builder able to adapt
-        // the creation of URLs as a result of @{...} expressions in a way that makes sense in this
-        // environment.
-        this.setLinkBuilder(new SpringWebFluxLinkBuilder());
-
     }
 
 
@@ -343,9 +329,13 @@ public class SpringWebFluxTemplateEngine
         final long sseEventsID =
                 (dataDriver instanceof IReactiveSSEDataDriverContextVariable?
                         ((IReactiveSSEDataDriverContextVariable) dataDriver).getSseEventsFirstID() : 0L);
-        final ReactiveAdapterRegistry reactiveAdapterRegistry =
-                (context instanceof SpringWebFluxContext ?
-                        ((SpringWebFluxContext)context).getReactiveAdapterRegistry() : null);
+        final ReactiveAdapterRegistry reactiveAdapterRegistry;
+        if (Contexts.isSpringWebFluxWebContext(context)) {
+            reactiveAdapterRegistry =
+                    Contexts.getSpringWebFluxWebExchange(context).getApplication().getReactiveAdapterRegistry();
+        } else {
+            reactiveAdapterRegistry = null;
+        }
 
 
         // STEP 2: Replace the data driver variable with a DataDrivenTemplateIterator
@@ -620,10 +610,10 @@ public class SpringWebFluxTemplateEngine
             return context;
         }
 
-        // Not an IEngineContext, but might still be an ISpringWebFluxContext and we don't want to lose that info
-        if (context instanceof ISpringWebFluxContext) {
-            return new DataDrivenSpringWebFluxContextWrapper(
-                    (ISpringWebFluxContext)context, dataDriverVariableName, dataDrivenTemplateIterator);
+        // Not an IEngineContext, but might still be an IWebContext, and we don't want to lose that info
+        if (Contexts.isWebContext(context)) {
+            return new DataDrivenWebContextWrapper(
+                    Contexts.asWebContext(context), dataDriverVariableName, dataDrivenTemplateIterator);
         }
 
         // Not a recognized context interface: just use a default implementation
@@ -824,38 +814,23 @@ public class SpringWebFluxTemplateEngine
 
 
     /*
-     * This wrapper of an ISpringWebFluxContext is meant to wrap the original context object sent to the
+     * This wrapper of an IWebContext is meant to wrap the original context object sent to the
      * template engine while hiding the data driver variable, returning a DataDrivenTemplateIterator in its place.
      */
-    static class DataDrivenSpringWebFluxContextWrapper
-            extends DataDrivenContextWrapper implements ISpringWebFluxContext {
+    static class DataDrivenWebContextWrapper
+            extends DataDrivenContextWrapper implements IWebContext {
 
-        private final ISpringWebFluxContext context;
+        private final IWebContext context;
 
-        DataDrivenSpringWebFluxContextWrapper(
-                final ISpringWebFluxContext context, final String dataDriverVariableName,
+        DataDrivenWebContextWrapper(
+                final IWebContext context, final String dataDriverVariableName,
                 final DataDrivenTemplateIterator dataDrivenTemplateIterator) {
             super(context, dataDriverVariableName, dataDrivenTemplateIterator);
             this.context = context;
         }
 
         @Override
-        public ServerHttpRequest getRequest() {
-            return this.context.getRequest();
-        }
-
-        @Override
-        public ServerHttpResponse getResponse() {
-            return this.context.getResponse();
-        }
-
-        @Override
-        public Mono<WebSession> getSession() {
-            return this.context.getSession();
-        }
-
-        @Override
-        public ServerWebExchange getExchange() {
+        public IWebExchange getExchange() {
             return this.context.getExchange();
         }
 

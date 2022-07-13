@@ -51,6 +51,8 @@ import org.thymeleaf.standard.expression.FragmentExpression;
 import org.thymeleaf.standard.expression.IStandardExpressionParser;
 import org.thymeleaf.standard.expression.StandardExpressions;
 import org.thymeleaf.util.FastStringWriter;
+import org.thymeleaf.web.IWebExchange;
+import org.thymeleaf.web.servlet.JavaxServletWebApplication;
 
 
 /**
@@ -197,6 +199,10 @@ public class ThymeleafView
             throws Exception {
 
         final ServletContext servletContext = getServletContext() ;
+        final IWebExchange webExchange =
+                JavaxServletWebApplication.
+                        buildApplication(servletContext).buildExchange(request, response);
+
         final String viewTemplateName = getTemplateName();
         final ISpringTemplateEngine viewTemplateEngine = getTemplateEngine();
 
@@ -256,7 +262,7 @@ public class ThymeleafView
 
         final IEngineConfiguration configuration = viewTemplateEngine.getConfiguration();
         final WebExpressionContext context =
-                new WebExpressionContext(configuration, request, response, servletContext, getLocale(), mergedModel);
+                new WebExpressionContext(configuration, webExchange, getLocale(), mergedModel);
 
 
         final String templateName;
@@ -272,7 +278,7 @@ public class ThymeleafView
 
             // A check must be made that the template name is not included in the URL, so that we make sure
             // no code to be executed comes from direct user input.
-            SpringRequestUtils.checkViewNameNotInRequest(viewTemplateName, request);
+            SpringRequestUtils.checkViewNameNotInRequest(viewTemplateName, webExchange.getRequest());
 
             final IStandardExpressionParser parser = StandardExpressions.getExpressionParser(configuration);
 
@@ -337,7 +343,7 @@ public class ThymeleafView
 
             final String computedContentType =
                     SpringContentTypeUtils.computeViewContentType(
-                            request,
+                            webExchange,
                             (templateContentType != null? templateContentType : DEFAULT_CONTENT_TYPE),
                             (templateCharacterEncoding != null? Charset.forName(templateCharacterEncoding) : null));
 

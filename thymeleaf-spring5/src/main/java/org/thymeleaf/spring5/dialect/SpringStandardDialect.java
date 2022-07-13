@@ -20,6 +20,7 @@
 package org.thymeleaf.spring5.dialect;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -52,6 +53,7 @@ import org.thymeleaf.spring5.processor.SpringSrcTagProcessor;
 import org.thymeleaf.spring5.processor.SpringTextareaFieldTagProcessor;
 import org.thymeleaf.spring5.processor.SpringUErrorsTagProcessor;
 import org.thymeleaf.spring5.processor.SpringValueTagProcessor;
+import org.thymeleaf.spring5.util.SpringReactiveModelAdditionsUtils;
 import org.thymeleaf.spring5.util.SpringVersionUtils;
 import org.thymeleaf.standard.StandardDialect;
 import org.thymeleaf.standard.expression.IStandardConversionService;
@@ -105,19 +107,10 @@ public class SpringStandardDialect extends StandardDialect {
 
     private static final Map<String,Object> REACTIVE_MODEL_ADDITIONS_EXECUTION_ATTRIBUTES;
 
-    // This execution attribute will force the asynchronous resolution of the WebSession (not the real creation of a
-    // persisted session) before view execution. This will avoid the need to block in order to obtain the WebSession
-    // from the ServerWebExchange during template execution.
-    // NOTE here we are not using the constant from the ReactiveThymeleafView class (instead we replicate its same
-    // value "ThymeleafReactiveModelAdditions:" so that we don't force the initialisation of that class in
-    // non-WebFlux environments.
-    private static final String WEB_SESSION_EXECUTION_ATTRIBUTE_NAME =
-            "ThymeleafReactiveModelAdditions:" + SpringContextUtils.WEB_SESSION_ATTRIBUTE_NAME;
-
-    // These variables will be initialized lazily following the model applied in the extended StandardDialect.
-    private IExpressionObjectFactory expressionObjectFactory = null;
-    private IStandardConversionService conversionService = null;
-    
+    private static final String REACTIVE_MODEL_ADDITIONS_WEB_SESSION_NAME =
+            SpringReactiveModelAdditionsUtils.toReactiveModelAdditionName(SpringContextUtils.WEB_SESSION_ATTRIBUTE_NAME);
+    private static final String REACTIVE_MODEL_ADDITIONS_WEB_EXCHANGE_PRINCIPAL_NAME =
+            SpringReactiveModelAdditionsUtils.toReactiveModelAdditionName(SpringContextUtils.WEB_EXCHANGE_PRINCIPAL_ATTRIBUTE_NAME);
 
 
 
@@ -148,9 +141,14 @@ public class SpringStandardDialect extends StandardDialect {
 
             // Returns Mono<WebSession>, but we will specify Object in order not to bind this class to Mono at compile time
             final Function<ServerWebExchange, Object> webSessionInitializer = (exchange) -> exchange.getSession();
+            // Returns Mono<Principal>, but we will specify Object in order not to bind this class to Mono at compile time
+            final Function<ServerWebExchange, Object> webExchangePrincipalInitializer = (exchange) -> exchange.getPrincipal();
 
-            REACTIVE_MODEL_ADDITIONS_EXECUTION_ATTRIBUTES =
-                    Collections.singletonMap(WEB_SESSION_EXECUTION_ATTRIBUTE_NAME, webSessionInitializer);
+            REACTIVE_MODEL_ADDITIONS_EXECUTION_ATTRIBUTES = new HashMap<String,Object>();
+            REACTIVE_MODEL_ADDITIONS_EXECUTION_ATTRIBUTES.put(
+                    REACTIVE_MODEL_ADDITIONS_WEB_SESSION_NAME, webSessionInitializer);
+            REACTIVE_MODEL_ADDITIONS_EXECUTION_ATTRIBUTES.put(
+                    REACTIVE_MODEL_ADDITIONS_WEB_EXCHANGE_PRINCIPAL_NAME, webExchangePrincipalInitializer);
 
         }
 
@@ -284,6 +282,12 @@ public class SpringStandardDialect extends StandardDialect {
     @Override
     public IStandardVariableExpressionEvaluator getVariableExpressionEvaluator() {
         return SPELVariableExpressionEvaluator.INSTANCE;
+    }
+
+    @Override
+    public void setVariableExpressionEvaluator(final IStandardVariableExpressionEvaluator variableExpressionEvaluator) {
+        throw new UnsupportedOperationException(
+                "Variable Expression Evaluator cannot be modified in SpringStandardDialect");
     }
 
 

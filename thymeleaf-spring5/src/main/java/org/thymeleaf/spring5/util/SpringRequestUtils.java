@@ -19,12 +19,11 @@
  */
 package org.thymeleaf.spring5.util;
 
-import java.util.Enumeration;
-
-import javax.servlet.http.HttpServletRequest;
+import java.util.Map;
 
 import org.thymeleaf.exceptions.TemplateProcessingException;
 import org.thymeleaf.util.StringUtils;
+import org.thymeleaf.web.IWebRequest;
 import org.unbescape.uri.UriEscape;
 
 /**
@@ -38,23 +37,38 @@ public final class SpringRequestUtils {
 
 
 
-    public static void checkViewNameNotInRequest(final String viewName, final HttpServletRequest request) {
+    public static void checkViewNameNotInRequest(final String viewName, final IWebRequest request) {
 
         final String vn = StringUtils.pack(viewName);
 
-        final String requestURI = StringUtils.pack(UriEscape.unescapeUriPath(request.getRequestURI()));
+        if (!containsExpression(vn)) {
+            // We are only worried about expressions coming from user input, so if the view name contains no
+            // expression at all, we should be safe at this stage.
+            return;
+        }
 
-        boolean found = (requestURI != null && requestURI.contains(vn));
+        boolean found = false;
+
+        final String pathWithinApplication =
+                StringUtils.pack(UriEscape.unescapeUriPath(request.getPathWithinApplication()));
+        if (pathWithinApplication != null && containsExpression(pathWithinApplication)) {
+            // View name contains an expression, and it seems the path does too. This is too dangerous.
+            found = true;
+        }
+
         if (!found) {
-            final Enumeration<String> paramNames = request.getParameterNames();
-            String[] paramValues;
-            String paramValue;
-            while (!found && paramNames.hasMoreElements()) {
-                paramValues = request.getParameterValues(paramNames.nextElement());
-                for (int i = 0; !found && i < paramValues.length; i++) {
-                    paramValue = StringUtils.pack(UriEscape.unescapeUriQueryParam(paramValues[i]));
-                    if (paramValue.contains(vn)) {
-                        found = true;
+            final Map<String,String[]> parameterMap = request.getParameterMap();
+            if (parameterMap != null && !parameterMap.isEmpty()) {
+                for (final String[] parameterValues : parameterMap.values()) {
+                    for (int i = 0; !found && i < parameterValues.length; i++) {
+                        final String parameterValue = StringUtils.pack(parameterValues[i]);
+                        if (parameterValue != null && containsExpression(parameterValue) && vn.contains(parameterValue)) {
+                            // Request parameter contains an expression, and it is contained in the view name. Too dangerous.
+                            found = true;
+                        }
+                    }
+                    if (found) {
+                        break;
                     }
                 }
             }
@@ -62,12 +76,34 @@ public final class SpringRequestUtils {
 
         if (found) {
             throw new TemplateProcessingException(
-                    "View name is an executable expression, and it is present in a literal manner in " +
-                    "request path or parameters, which is forbidden for security reasons.");
+                    "View name contains an expression and so does either the URL path or one of the request " +
+                    "parameters. This is forbidden in order to reduce the possibilities that direct user input " +
+                    "is executed as a part of the view name.");
         }
 
     }
 
+
+    private static boolean containsExpression(final String text) {
+        final int textLen = text.length();
+        char c;
+        boolean expInit = false;
+        for (int i = 0; i < textLen; i++) {
+            c = text.charAt(i);
+            if (!expInit) {
+                if (c == '$' || c == '*' || c == '#' || c == '@' || c == '~') {
+                    expInit = true;
+                }
+            } else {
+                if (c == '{') {
+                    return true;
+                } else if (!Character.isWhitespace(c)) {
+                    expInit = false;
+                }
+            }
+        }
+        return false;
+    }
 
 
 

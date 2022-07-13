@@ -26,7 +26,7 @@
   <groupId>org.thymeleaf</groupId>
   <artifactId>thymeleaf-spring5</artifactId>
   <packaging>jar</packaging>
-  <version>3.0.13-SNAPSHOT</version>
+  <version>3.1.0-SNAPSHOT</version>
   <name>thymeleaf-spring5</name>
   <url>http://www.thymeleaf.org</url>
 
@@ -84,12 +84,12 @@
     <snapshotRepository>
       <id>sonatype-nexus-snapshots</id>
       <name>Sonatype Nexus Snapshots</name>
-      <url>http://oss.sonatype.org/content/repositories/snapshots</url>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
     </snapshotRepository>
     <repository>
       <id>sonatype-nexus-snapshots</id>
       <name>Sonatype Nexus Snapshots</name>
-      <url>http://oss.sonatype.org/service/local/staging/deploy/maven2</url>
+      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
     </repository>
   </distributionManagement>
 
@@ -116,9 +116,10 @@
     <!-- NOTE module name is fixed and not set to project.artifactId because this would not be a     -->
     <!-- valid approach for project names containing hyphens, which are not allowed in module names. -->
     <module.name>thymeleaf.spring5</module.name>
+    <servlet-api.version>2.5</servlet-api.version>
     <springframework.version>5.0.8.RELEASE</springframework.version>
     <springwebflow.version>2.5.0.RELEASE</springwebflow.version>
-    <slf4j.version>1.7.25</slf4j.version>
+    <slf4j.version>1.7.32</slf4j.version>
   </properties>
 
 
@@ -195,7 +196,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>3.2.0</version>
+        <version>3.3.1</version>
         <configuration>
           <show>protected</show>
           <noqualifier>java.lang</noqualifier>
@@ -282,7 +283,7 @@
         <version>3.0.0</version>
         <executions>
           <!-- Copy javadoc's "element-list" file to "package-list" in order to allow projects    -->
-          <!-- using versions of the javadoc tool < JDK9 to properly link to Thymeleaf's javadoc  -->
+          <!-- using versions of the javadoc tool < JDK9 to properly link to Thymeleaf's javadoc -->
           <!-- as an external link.                                                               -->
           <!-- NOTE this modifies the javadoc AFTER the creation of the jar as it is not possible -->
           <!-- to do so by previously configuring javadoc:javadoc in the prepare-package phase    -->
@@ -296,9 +297,7 @@
             </goals>
             <configuration>
               <target name="copy javadocs element-list to package-list">
-                <copy file="${project.build.directory}/apidocs/element-list"
-                      tofile="${project.build.directory}/apidocs/package-list"
-                      failonerror="false"/>
+                <copy file="${project.build.directory}/apidocs/element-list" tofile="${project.build.directory}/apidocs/package-list" failonerror="false" />
               </target>
             </configuration>
           </execution>
@@ -331,7 +330,7 @@
     <dependency>
       <groupId>javax.servlet</groupId>
       <artifactId>servlet-api</artifactId>
-      <version>2.5</version>
+      <version>${servlet-api.version}</version>
       <scope>provided</scope>
       <optional>true</optional>
     </dependency>

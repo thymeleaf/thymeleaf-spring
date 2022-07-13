@@ -31,9 +31,11 @@ public final class SpringStandardExpressionUtils {
 
     private static final char[] NEW_ARRAY = "wen".toCharArray(); // Inverted "new"
     private static final int NEW_LEN = NEW_ARRAY.length;
+    private static final char[] PARAM_ARRAY = "marap".toCharArray(); // Inverted "param"
+    private static final int PARAM_LEN = PARAM_ARRAY.length;
 
 
-    public static boolean containsSpELInstantiationOrStatic(final String expression) {
+    public static boolean containsSpELInstantiationOrStaticOrParam(final String expression) {
 
         /*
          * Checks whether the expression contains instantiation of objects ("new SomeClass") or makes use of
@@ -43,7 +45,7 @@ public final class SpringStandardExpressionUtils {
         final int explen = expression.length();
         int n = explen;
         int ni = 0; // index for computing position in the NEW_ARRAY
-        int si = -1;
+        int pi = 0; // index for computing position in the PARAM_ARRAY
         char c;
         while (n-- != 0) {
 
@@ -56,7 +58,7 @@ public final class SpringStandardExpressionUtils {
                     && c == NEW_ARRAY[ni]
                     && (ni > 0 || ((n + 1 < explen) && Character.isWhitespace(expression.charAt(n + 1))))) {
                 ni++;
-                if (ni == NEW_LEN && (n == 0 || !Character.isJavaIdentifierPart(expression.charAt(n - 1)))) {
+                if (ni == NEW_LEN && (n == 0 || !isSafeIdentifierChar(expression.charAt(n - 1)))) {
                     return true; // we found an object instantiation
                 }
                 continue;
@@ -66,23 +68,34 @@ public final class SpringStandardExpressionUtils {
                 // We 'restart' the matching counter just in case we had a partial match
                 n += ni;
                 ni = 0;
-                if (si < n) {
-                    // This has to be restarted too
-                    si = -1;
-                }
                 continue;
             }
 
             ni = 0;
 
-            if (c == ')') {
-                si = n;
-            } else if (si > n && c == '('
-                        && ((n - 1 >= 0) && (expression.charAt(n - 1) == 'T'))
-                        && ((n - 1 == 0) || !Character.isJavaIdentifierPart(expression.charAt(n - 2)))) {
+            // When checking for the "param" keyword, we need to identify that it is not a part of a larger
+            // identifier.
+            if (pi < PARAM_LEN
+                    && c == PARAM_ARRAY[pi]
+                    && (pi > 0 || ((n + 1 < explen) && !isSafeIdentifierChar(expression.charAt(n + 1))))) {
+                pi++;
+                if (pi == PARAM_LEN && (n == 0 || !isSafeIdentifierChar(expression.charAt(n - 1)))) {
+                    return true; // we found a param access
+                }
+                continue;
+            }
+
+            if (pi > 0) {
+                // We 'restart' the matching counter just in case we had a partial match
+                n += pi;
+                pi = 0;
+                continue;
+            }
+
+            pi = 0;
+
+            if (c == '(' && ((n - 1 >= 0) && isPreviousStaticMarker(expression, n))) {
                 return true;
-            } else if (si > n && !(Character.isJavaIdentifierPart(c) || c == '.')) {
-                si = -1;
             }
 
         }
@@ -92,7 +105,28 @@ public final class SpringStandardExpressionUtils {
     }
 
 
+    private static boolean isPreviousStaticMarker(final String expression, final int idx) {
+        char c,c1;
+        int n = idx;
+        while (n-- != 0) {
+            c = expression.charAt(n);
+            if (c == 'T') {
+                if (n == 0) {
+                    return true;
+                }
+                c1 = expression.charAt(n - 1);
+                return !isSafeIdentifierChar(c1);
+            } else if (!Character.isWhitespace(c)) {
+                return false;
+            }
+        }
+        return false;
+    }
 
+
+    private static boolean isSafeIdentifierChar(final char c) {
+        return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_';
+    }
 
 
     private SpringStandardExpressionUtils() {
